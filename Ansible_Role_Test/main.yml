@@ -1,0 +1,66 @@
+---
+- name: LOCALHOST - GET DATE AND TIME, CLEANUP DESTINATION DIRECTORY
+  hosts: localhost
+  gather_facts: yes
+
+  tasks:
+  
+    - name: OBTAIN CURRENT DATE AND TIME FROM LOCALHOST
+      set_fact:
+        # This makes a variable persistent; setting this as a play variable ('vars') will not work
+        var_date_time_local: "{{ ansible_date_time }}"
+
+    - name: INCLUDE A ROLE - role_linux_local_dest_dir_cleanup
+      include_role:
+        name: role_linux_local_dest_dir_cleanup
+
+- name: TEST PLAYBOOK UTILIZING ANSIBLE ROLES
+  hosts: all
+  connection: network_cli
+  gather_facts: no
+
+  vars:
+    var_date_time: "{{ hostvars['localhost']['var_date_time_local'] }}"
+    var_dest_dir: '~/job_output_files'
+    var_survey_mul_choice: 'null'
+
+  tasks:
+
+    - name: GATHER FACTS
+      ios_facts:
+
+    - name: GET DATE AND TIME
+      ios_command:
+        commands:
+          - show clock
+      register: var_show_clock
+
+    - name: CREATE HEADERS IN CSV FILE
+      lineinfile:
+        create: yes
+        path: "{{ var_dest_dir }}/test_log_{{ var_date_time.iso8601_basic_short }}.csv"
+        line: '"Device IP Address","Hostname","Date/Time"'
+      run_once: yes
+
+    - name: INSERT DATA INTO CSV FILE
+      lineinfile:
+        create: yes
+        path: "{{ var_dest_dir }}/test_log_{{ var_date_time.iso8601_basic_short }}.csv"
+        insertafter: EOF
+        line: '"{{ inventory_hostname }}","{{ ansible_net_hostname }}","{{ var_show_clock.stdout[0] }}"'
+      with_items: "{{ inventory_hostname }}"
+      ignore_errors: yes
+
+- name: EMAIL NOTIFICATION
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    var_date_time: "{{ hostvars['localhost']['var_date_time_local'] }}"
+
+  tasks:
+
+    - name: INCLUDE A ROLE - role_linux_send_email
+      include_role:
+        name: role_linux_send_email
+...
