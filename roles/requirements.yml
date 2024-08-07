@@ -1,0 +1,11 @@
+---
+- role_linux_local_dest_dir_cleanup
+- role_ios_load_image_set_vars
+- role_ios_load_image
+- role_ios_load_image_post_checks
+- role_ios_check_current_image
+- role_linux_send_email
+- role_iosxe_check_current_rommon
+- role_iosxe_load_rommon
+- role_ios_free_space_check
+- role_iosxe_rommon_free_space_check
